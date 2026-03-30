@@ -97,16 +97,34 @@ export default function Home() {
       if (recordError) throw recordError;
       setRecords(recordData || []);
 
-      // 3. 통계 계산
-      const { data: allRecords } = await supabase
+      // 3. 통계 계산 (친구 수 포함)
+      const { data: allRecordsData, error: allRecordsError } = await supabase
         .from('records')
-        .select('is_success')
+        .select(`
+          is_success,
+          record_members (user_id)
+        `)
         .eq('user_id', authUser.id);
 
-      if (allRecords) {
-        const escapes = allRecords.filter(r => r.is_success).length;
-        const rate = allRecords.length > 0 ? Math.round((escapes / allRecords.length) * 100) : 0;
-        setStats(prev => ({ ...prev, escapes, successRate: rate }));
+      if (allRecordsData) {
+        const escapes = allRecordsData.filter(r => r.is_success).length;
+        const rate = allRecordsData.length > 0 ? Math.round((escapes / allRecordsData.length) * 100) : 0;
+        
+        // 고유 친구 수 계산
+        const allFriends = new Set();
+        allRecordsData.forEach(r => {
+          r.record_members?.forEach((m: any) => {
+            if (m.user_id !== authUser.id) {
+              allFriends.add(m.user_id);
+            }
+          });
+        });
+
+        setStats({
+          escapes,
+          successRate: rate,
+          friends: allFriends.size
+        });
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -192,15 +210,20 @@ export default function Home() {
           <p>내 손안의 방탈출 아카이브</p>
         </div>
         <nav className={styles.nav}>
-          <span className={styles.userEmail}>{profile?.nickname || user.email}</span>
-          <Link href="/profile" className={styles.navButton}>프로필</Link>
-          <button className={styles.navButton} onClick={handleLogout}>로그아웃</button>
-          <button 
-            className={`${styles.navButton} ${styles.primaryButton}`}
-            onClick={() => setIsModalOpen(true)}
-          >
-            새 기록 작성
-          </button>
+          <div className={styles.userSection}>
+            <span className={styles.userEmail}>{profile?.nickname || '방랑자'}</span>
+          </div>
+          <div className={styles.navLinks}>
+            <Link href="/profile" className={styles.navButton}>프로필</Link>
+            <button className={styles.navButton} onClick={handleLogout}>로그아웃</button>
+            <button 
+              className={`${styles.navButton} ${styles.primaryButton}`}
+              onClick={() => setIsModalOpen(true)}
+            >
+              <span className={styles.desktopOnly}>새 기록 작성</span>
+              <span className={styles.mobileOnly}>+ 기록</span>
+            </button>
+          </div>
         </nav>
       </header>
 
@@ -272,6 +295,20 @@ export default function Home() {
                     </div>
                     <span>⭐ {record.rating}</span>
                   </div>
+                </div>
+              </div>
+            ))}
+
+            {/* 자리가 비었을 때 보여주는 placeholder */}
+            {records.length < 3 && Array.from({ length: 3 - records.length }).map((_, i) => (
+              <div 
+                key={`placeholder-${i}`} 
+                className={`${styles.placeholderCard} glow-hover`}
+                onClick={() => setIsModalOpen(true)}
+              >
+                <div className={styles.placeholderContent}>
+                  <span className={styles.plusIcon}>+</span>
+                  <p>다음 탈출 기록 남기기</p>
                 </div>
               </div>
             ))}

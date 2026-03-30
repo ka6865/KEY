@@ -29,42 +29,85 @@
 
 .nav {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1.5rem;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.userSection {
+  background: hsla(220, 30%, 10%, 0.4);
+  padding: 0.25rem 1rem;
+  border-radius: 20px;
+  border: 1px solid hsla(0, 0%, 100%, 0.05);
 }
 
 .userEmail {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.9375rem;
+  font-weight: 700;
   color: var(--accent);
-  line-height: normal;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.desktopOnly {
+  display: inline;
+}
+
+.mobileOnly {
+  display: none;
 }
 
 .navButton {
   background: transparent;
   border: none;
   color: hsl(var(--foreground));
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
-  height: 2.5rem;
-  padding: 0 0.5rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 8px;
   text-decoration: none;
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
+  opacity: 0.8;
 }
 
 .primaryButton {
   background: var(--accent-gradient);
   color: white;
-  padding: 0 1.5rem;
+  padding: 0 1rem;
   border-radius: 999px;
   font-weight: 700;
-  height: 2.5rem;
+  height: 2.25rem;
   display: flex;
   align-items: center;
   box-shadow: 0 4px 15px hsla(var(--accent-hsl), 0.3);
+  opacity: 1 !important;
+}
+
+@media (max-width: 480px) {
+  .desktopOnly {
+    display: none;
+  }
+  .mobileOnly {
+    display: inline;
+  }
+  .navLinks {
+    gap: 0.25rem;
+  }
+  .navButton {
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+  }
 }
 
 .hero {
@@ -181,6 +224,41 @@
   border-radius: var(--radius);
   color: hsl(var(--muted-foreground));
   grid-column: 1 / -1;
+}
+
+.placeholderCard {
+  border: 1px dashed hsla(0, 0%, 100%, 0.15);
+  border-radius: var(--radius);
+  background: hsla(0, 0%, 100%, 0.02);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 380px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.placeholderContent {
+  text-align: center;
+  color: hsl(var(--muted-foreground));
+  opacity: 0.6;
+}
+
+.plusIcon {
+  display: block;
+  font-size: 2.5rem;
+  font-weight: 300;
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+}
+
+.placeholderCard:hover {
+  background: hsla(0, 0%, 100%, 0.04);
+  border-color: hsla(var(--accent-hsl), 0.5);
+}
+
+.placeholderCard:hover .placeholderContent {
+  opacity: 1;
 }
 
 .themeInfo {

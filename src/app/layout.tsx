@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 
@@ -16,8 +16,14 @@ export const metadata: Metadata = {
   title: "THE KEY | 프리미엄 방탈출 아카이브",
   description: "내 손안의 고품격 방탈출 기록 공간. 성공률, 테마 분석, 친구 초대 기능을 한곳에서 관리하세요.",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#0a0a0c",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

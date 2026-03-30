@@ -14,8 +14,10 @@
 
 .modal {
   background: hsl(var(--card));
-  width: 90%;
-  max-width: 500px;
+  width: 95%;
+  max-width: 550px;
+  max-height: 90vh;
+  overflow-y: auto;
   border-radius: var(--radius);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
   padding: 2rem;
@@ -51,9 +53,9 @@
 }
 
 .field label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: hsl(var(--muted-foreground));
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .input {
@@ -161,20 +163,52 @@
   color: white;
 }
 
+.ratingSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  background: hsla(0, 0%, 100%, 0.03);
+  padding: 1.25rem;
+  border-radius: 12px;
+  border: 1px solid hsla(0, 0%, 100%, 0.05);
+}
+
+.ratingField {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ratingField label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+}
+
 .ratingGroup {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
+.ratingValue {
+  font-size: 0.75rem;
+  color: var(--accent);
+  font-weight: 700;
+  margin-left: 0.5rem;
+  min-width: 25px;
+}
+
 .star {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   cursor: pointer;
-  color: hsla(0, 0%, 100%, 0.2);
-  transition: color 0.2s;
+  color: hsla(0, 0%, 100%, 0.15);
+  transition: all 0.2s;
 }
 
 .starActive {
   color: #ffc107;
+  text-shadow: 0 0 10px rgba(255, 193, 7, 0.3);
 }
 
 .inviteSection {

@@ -19,7 +19,10 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
   const [themeName, setThemeName] = useState(initialData?.theme_name || '');
   const [cafeName, setCafeName] = useState(initialData?.cafe_name || '');
   const [isSuccess, setIsSuccess] = useState(initialData ? initialData.is_success : true);
-  const [rating, setRating] = useState(initialData?.rating || 5);
+  const [rating, setRating] = useState(initialData?.rating || 0);
+  const [ratingMechanisms, setRatingMechanisms] = useState(initialData?.rating_mechanisms || 0);
+  const [ratingFear, setRatingFear] = useState(initialData?.rating_fear || 0);
+  const [ratingDifficulty, setRatingDifficulty] = useState(initialData?.rating_difficulty || 0);
   const [hints, setHints] = useState(initialData?.hints_used || 0);
   const [date, setDate] = useState(initialData?.played_at || new Date().toISOString().split('T')[0]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +53,9 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
         cafe_name: cafeName.trim(),
         is_success: isSuccess,
         rating,
+        rating_mechanisms: ratingMechanisms,
+        rating_fear: ratingFear,
+        rating_difficulty: ratingDifficulty,
         hints_used: hints,
         played_at: date,
       };
@@ -100,6 +106,24 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
       setLoading(false);
     }
   };
+
+  const StarRating = ({ value, onChange, label }: { value: number, onChange: (v: number) => void, label: string }) => (
+    <div className={styles.ratingField}>
+      <label>{label}</label>
+      <div className={styles.ratingGroup}>
+        {[1, 2, 3, 4, 5].map((star) => (
+          <span 
+            key={star} 
+            className={`${styles.star} ${value >= star ? styles.starActive : ''}`}
+            onClick={() => onChange(star)}
+          >
+            ★
+          </span>
+        ))}
+        <span className={styles.ratingValue}>{value}점</span>
+      </div>
+    </div>
+  );
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -167,21 +191,14 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
             </div>
           </div>
 
+          <div className={styles.ratingSection}>
+            <StarRating label="🧱 장치/연출" value={ratingMechanisms} onChange={setRatingMechanisms} />
+            <StarRating label="👻 공포도" value={ratingFear} onChange={setRatingFear} />
+            <StarRating label="🧠 난이도" value={ratingDifficulty} onChange={setRatingDifficulty} />
+            <StarRating label="🏆 총평" value={rating} onChange={setRating} />
+          </div>
+
           <div className={styles.row}>
-            <div className={styles.field}>
-              <label>별점</label>
-              <div className={styles.ratingGroup}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <span 
-                    key={star} 
-                    className={`${styles.star} ${rating >= star ? styles.starActive : ''}`}
-                    onClick={() => setRating(star)}
-                  >
-                    ★
-                  </span>
-                ))}
-              </div>
-            </div>
             <div className={styles.field}>
               <label>사용 힌트 수</label>
               <input 
