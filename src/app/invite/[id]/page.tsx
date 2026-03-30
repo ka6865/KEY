@@ -4,104 +4,166 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { supabase } from '../../../lib/supabase';
 import styles from '../../page.module.css';
+import KakaoLogin from '../../../components/KakaoLogin';
 
 export default function InvitePage() {
   const router = useRouter();
   const params = useParams();
   const recordId = params.id as string;
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  
+  const [record, setRecord] = useState<any>(null);
+  const [inviter, setInviter] = useState<any>(null);
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isAlreadyMember, setIsAlreadyMember] = useState(false);
 
   useEffect(() => {
-    const joinRecord = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        if (!session) {
-          // 로그인 안된 경우 카카오 로그인 유도
-          alert('친구와 기록을 공유하려면 로그인이 필요합니다.');
-          router.push('/');
-          return;
-        }
+    const checkAuthAndData = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      
+      if (recordId) {
+        fetchRecordData(session?.user?.id);
+      }
+    };
 
-        const user = session.user;
+    checkAuthAndData();
+  }, [recordId]);
 
-        // 1. 해당 기록이 존재하는지 확인
-        const { data: record, error: fetchError } = await supabase
-          .from('records')
-          .select('theme_name')
-          .eq('id', recordId)
-          .single();
+  const fetchRecordData = async (currentUserId?: string) => {
+    try {
+      // 1. 기록 상세 정보와 작성자 프로필 가져오기
+      const { data: recordData, error: recordError } = await supabase
+        .from('records')
+        .select(`
+          *,
+          profiles:user_id (
+            nickname,
+            profile_img
+          )
+        `)
+        .eq('id', recordId)
+        .single();
 
-        if (fetchError || !record) {
-          throw new Error('존재하지 않는 기록이거나 만료된 링크입니다.');
-        }
+      if (recordError || !recordData) {
+        throw new Error('존재하지 않는 기록이거나 만료된 링크입니다.');
+      }
 
-        // 2. 이미 멤버인지 확인 (본인 포함)
+      setRecord(recordData);
+      setInviter(recordData.profiles);
+
+      // 2. 현재 로그인 중이라면 이미 멤버인지 확인
+      if (currentUserId) {
         const { data: existingMember } = await supabase
           .from('record_members')
           .select('id')
           .eq('record_id', recordId)
-          .eq('user_id', user.id)
+          .eq('user_id', currentUserId)
           .maybeSingle();
 
         if (existingMember) {
-          alert('이미 참여 중인 기록입니다.');
-          router.push('/');
-          return;
+          setIsAlreadyMember(true);
         }
-
-        // 3. 멤버로 추가
-        const { error: joinError } = await supabase
-          .from('record_members')
-          .insert({
-            record_id: recordId,
-            user_id: user.id
-          });
-
-        if (joinError) throw joinError;
-
-        setStatus('success');
-        setTimeout(() => router.push('/'), 2000);
-      } catch (err: any) {
-        console.error('Join Error:', err);
-        setStatus('error');
-        setErrorMsg(err.message || '초대 수락 중 오류가 발생했습니다.');
       }
-    };
-
-    if (recordId) {
-      joinRecord();
+    } catch (err: any) {
+      setErrorMsg(err.message);
+    } finally {
+      setLoading(false);
     }
-  }, [recordId, router]);
+  };
+
+  const handleJoin = async () => {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    setJoining(true);
+    try {
+      const { error: joinError } = await supabase
+        .from('record_members')
+        .insert({
+          record_id: recordId,
+          user_id: user.id
+        });
+
+      if (joinError) throw joinError;
+
+      // 성공 시 대시보드로 이동
+      router.push('/');
+    } catch (err: any) {
+      alert(err.message || '참여 중 오류가 발생했습니다.');
+      setJoining(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className={styles.main} style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <p className="gradient-text" style={{ fontSize: '1.5rem', fontWeight: 600 }}>초대장 확인 중...</p>
+      </div>
+    );
+  }
+
+  if (errorMsg) {
+    return (
+      <div className={styles.main} style={{ justifyContent: 'center', alignItems: 'center' }}>
+        <div className="glass" style={{ padding: '3rem', borderRadius: '24px', textAlign: 'center' }}>
+          <h2 style={{ color: '#ff4d4d', marginBottom: '1rem' }}>초대 오류</h2>
+          <p style={{ opacity: 0.7 }}>{errorMsg}</p>
+          <button onClick={() => router.push('/')} className={styles.navButton} style={{ marginTop: '2rem', margin: '0 auto' }}>홈으로 가기</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className={styles.main} style={{ justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
-      <div className="glass" style={{ padding: '3rem', borderRadius: '24px', maxWidth: '400px' }}>
-        {status === 'loading' && (
-          <>
-            <h2 className="gradient-text">초대 확인 중...</h2>
-            <p style={{ color: 'hsl(var(--muted-foreground))', marginTop: '1rem' }}>잠시만 기다려 주세요.</p>
-          </>
-        )}
-        {status === 'success' && (
-          <>
-            <h2 className="gradient-text">합류 성공!</h2>
-            <p style={{ color: 'hsl(var(--muted-foreground))', marginTop: '1rem' }}>친구의 방탈출 기록이 내 아카이브에도 추가되었습니다.<br />잠시 후 메인 화면으로 이동합니다.</p>
-          </>
-        )}
-        {status === 'error' && (
-          <>
-            <h2 style={{ color: '#ff4d4d' }}>초대 오류</h2>
-            <p style={{ color: 'hsl(var(--muted-foreground))', marginTop: '1rem' }}>{errorMsg}</p>
-            <button 
-              onClick={() => router.push('/')}
-              className={styles.navButton}
-              style={{ marginTop: '2rem', background: 'var(--accent)', color: 'white', padding: '0.75rem 1.5rem', borderRadius: '8px' }}
-            >
-              홈으로 가기
+    <div className={styles.main} style={{ justifyContent: 'center', alignItems: 'center', padding: '2rem' }}>
+      <div className="glass" style={{ padding: '3rem', borderRadius: '32px', maxWidth: '500px', width: '100%', textAlign: 'center' }}>
+        <div style={{ marginBottom: '2rem' }}>
+          <img 
+            src={inviter?.profile_img || 'https://via.placeholder.com/64'} 
+            className={styles.avatar} 
+            style={{ width: '64px', height: '64px', margin: '0 auto 1rem' }}
+          />
+          <h2 className="gradient-text">{inviter?.nickname || '친구'}님이</h2>
+          <p style={{ fontSize: '1.25rem', fontWeight: 500 }}>방탈출 크루로 초대했습니다!</p>
+        </div>
+
+        <div className="glass" style={{ background: 'hsla(0, 0%, 100%, 0.05)', padding: '2rem', borderRadius: '20px', marginBottom: '2.5rem', textAlign: 'left' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <span className={styles.badge} style={{ background: record.is_success ? 'var(--accent)' : '#ff4d4d' }}>
+              {record.is_success ? 'SUCCESS' : 'FAIL'}
+            </span>
+            <span style={{ fontSize: '0.875rem', opacity: 0.5 }}>{new Date(record.played_at).toLocaleDateString()}</span>
+          </div>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{record.theme_name}</h3>
+          <p style={{ color: 'var(--accent)', fontWeight: 600 }}>{record.cafe_name}</p>
+        </div>
+
+        {!user ? (
+          <div>
+            <p style={{ marginBottom: '1.5rem', opacity: 0.7, fontSize: '0.875rem' }}>기록에 합류하려면 카카오 로그인이 필요합니다.</p>
+            <KakaoLogin />
+          </div>
+        ) : isAlreadyMember ? (
+          <div>
+            <p style={{ marginBottom: '1.5rem', color: 'var(--accent)' }}>이미 참여 중인 기록입니다.</p>
+            <button onClick={() => router.push('/')} className={`${styles.navButton} ${styles.primaryButton}`} style={{ width: '100%', justifyContent: 'center' }}>
+              나의 대시보드 보기
             </button>
-          </>
+          </div>
+        ) : (
+          <button 
+            onClick={handleJoin} 
+            disabled={joining}
+            className={`${styles.navButton} ${styles.primaryButton}`}
+            style={{ width: '100%', height: '3.5rem', fontSize: '1.125rem', justifyContent: 'center' }}
+          >
+            {joining ? '합류 중...' : '기록에 합류하기'}
+          </button>
         )}
       </div>
     </div>

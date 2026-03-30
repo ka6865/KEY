@@ -35,7 +35,7 @@ export default function RecordsPage() {
         .from('records')
         .select(`
           *,
-          record_members (
+          record_members!inner (
             user_id,
             profiles (
               profile_img,
@@ -43,7 +43,7 @@ export default function RecordsPage() {
             )
           )
         `)
-        .eq('user_id', session.user.id);
+        .eq('record_members.user_id', session.user.id);
 
       if (error) throw error;
       setRecords(data || []);

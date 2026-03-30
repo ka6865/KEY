@@ -18,7 +18,45 @@ interface AddRecordModalProps {
 export default function AddRecordModal({ onClose, initialData }: AddRecordModalProps) {
   const [themeName, setThemeName] = useState(initialData?.theme_name || '');
   const [cafeName, setCafeName] = useState(initialData?.cafe_name || '');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
   const [isSuccess, setIsSuccess] = useState(initialData ? initialData.is_success : true);
+  
+  // 검색 디바운스
+  useEffect(() => {
+    // 1. 값이 비어있거나, 초기값과 동일하면 검색하지 않음 (초기 로딩 시 팝업 방지)
+    if (!cafeName.trim() || cafeName === initialData?.cafe_name) {
+      setSearchResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(cafeName)}`);
+        const data = await res.json();
+        if (data.items) {
+          // HTML 태그 제거 (네이버 검색 결과에는 <b> 등이 포함됨)
+          const cleanItems = data.items.map((item: any) => ({
+            ...item,
+            title: item.title.replace(/<[^>]*>?/gm, ''),
+            address: item.address
+          }));
+          setSearchResults(cleanItems);
+          setShowResults(true);
+        }
+      } catch (err) {
+        console.error('Search failed:', err);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [cafeName, initialData]);
+
+  const selectCafe = (title: string) => {
+    setCafeName(title);
+    setShowResults(false);
+  };
   const [rating, setRating] = useState(initialData?.rating || 0);
   const [ratingMechanisms, setRatingMechanisms] = useState(initialData?.rating_mechanisms || 0);
   const [ratingFear, setRatingFear] = useState(initialData?.rating_fear || 0);
@@ -148,15 +186,33 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
               />
             </div>
             <div className={styles.field}>
-              <label>지점/카페명</label>
-              <input 
-                className={styles.input} 
-                type="text" 
-                placeholder="지점명을 입력하세요" 
-                value={cafeName}
-                onChange={(e) => setCafeName(e.target.value)}
-                required
-              />
+              <label>지점/카페명 (검색 가능)</label>
+              <div className={styles.searchContainer}>
+                <input 
+                  className={styles.input} 
+                  type="text" 
+                  placeholder="예: 강남 키이스케이프" 
+                  value={cafeName}
+                  onChange={(e) => setCafeName(e.target.value)}
+                  onFocus={() => setShowResults(searchResults.length > 0)}
+                  required
+                />
+                
+                {showResults && searchResults.length > 0 && (
+                  <div className={styles.searchResults}>
+                    {searchResults.map((item, idx) => (
+                      <div 
+                        key={idx} 
+                        className={styles.searchItem}
+                        onClick={() => selectCafe(item.title)}
+                      >
+                        <strong>{item.title}</strong>
+                        <span>{item.address}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

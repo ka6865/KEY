@@ -85,7 +85,7 @@ export default function Home() {
           rating_mechanisms,
           rating_fear,
           rating_difficulty,
-          record_members (
+          record_members!inner (
             user_id,
             profiles (
               profile_img,
@@ -93,7 +93,7 @@ export default function Home() {
             )
           )
         `)
-        .eq('user_id', authUser.id)
+        .eq('record_members.user_id', authUser.id)
         .order('played_at', { ascending: false })
         .limit(6);
 
@@ -105,9 +105,9 @@ export default function Home() {
         .from('records')
         .select(`
           is_success,
-          record_members (user_id)
+          record_members!inner (user_id)
         `)
-        .eq('user_id', authUser.id);
+        .eq('record_members.user_id', authUser.id);
 
       if (allRecordsData) {
         const escapes = allRecordsData.filter(r => r.is_success).length;

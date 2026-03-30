@@ -73,41 +73,53 @@
   box-shadow: 0 0 0 2px hsla(var(--accent-hsl), 0.2);
 }
 
+.searchContainer {
+  position: relative;
+  width: 100%;
+}
+
 .searchResults {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  background: #111114;
+  background: hsla(240, 10%, 5%, 0.95);
+  backdrop-filter: blur(20px);
   border: 1px solid hsla(0, 0%, 100%, 0.1);
-  border-radius: 8px;
+  border-radius: 12px;
   margin-top: 0.5rem;
-  max-height: 200px;
+  max-height: 250px;
   overflow-y: auto;
-  z-index: 10;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.7);
 }
 
 .searchItem {
-  padding: 0.75rem 1rem;
+  padding: 1rem;
   cursor: pointer;
   border-bottom: 1px solid hsla(0, 0%, 100%, 0.05);
   transition: background 0.2s;
 }
 
+.searchItem:last-child {
+  border-bottom: none;
+}
+
 .searchItem:hover {
-  background: hsla(0, 0%, 100%, 0.05);
+  background: hsla(0, 0%, 100%, 0.08);
 }
 
 .searchItem strong {
   display: block;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: white;
+  margin-bottom: 0.25rem;
 }
 
 .searchItem span {
   font-size: 0.75rem;
   color: hsl(var(--muted-foreground));
+  display: block;
 }
 
 .selectedTheme {
