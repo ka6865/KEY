@@ -124,8 +124,40 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
     }
   };
 
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+    });
+  }, []);
+
+  const isOwner = currentUser?.id === initialData?.user_id;
+
+  const handleLeave = async () => {
+    if (!confirm('이 기록에서 정말로 나가시겠습니까?\n내 목록에서만 삭제되며 다른 친구들에겐 유지됩니다.')) return;
+    
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('record_members')
+        .delete()
+        .eq('record_id', initialData.id)
+        .eq('user_id', currentUser.id);
+      
+      if (error) throw error;
+      alert('기록에서 나갔습니다.');
+      onClose();
+      window.location.reload();
+    } catch (err: any) {
+      alert(err.message || '처리 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
-    if (!confirm('정말로 이 기록을 삭제하시겠습니까?')) return;
+    if (!confirm('정말로 이 기록을 삭제하시겠습니까?\n모든 참여자의 목록에서 완전히 사라집니다.')) return;
     
     setLoading(true);
     try {
@@ -135,7 +167,7 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
         .eq('id', initialData.id);
       
       if (error) throw error;
-      alert('기록이 삭제되었습니다.');
+      alert('기록이 완전히 삭제되었습니다.');
       onClose();
       window.location.reload();
     } catch (err: any) {
@@ -283,18 +315,29 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
               <button 
                 type="button" 
                 className={styles.deleteButton}
-                onClick={handleDelete}
+                onClick={isOwner ? handleDelete : handleLeave}
               >
-                삭제
+                {isOwner ? '전체 기록 삭제' : '이 기록에서 나가기'}
               </button>
             )}
-            <button 
-              type="submit" 
-              className={styles.submitButton}
-              disabled={loading}
-            >
-              {loading ? '처리 중...' : (initialData ? '수정 완료' : '기록 완료하기')}
-            </button>
+            
+            {(!initialData || isOwner) ? (
+              <button 
+                type="submit" 
+                className={styles.submitButton}
+                disabled={loading}
+              >
+                {loading ? '처리 중...' : (initialData ? '수정 완료' : '기록 완료하기')}
+              </button>
+            ) : (
+              <button 
+                type="button" 
+                className={styles.submitButton}
+                onClick={onClose}
+              >
+                닫기
+              </button>
+            )}
           </div>
         </form>
       </div>

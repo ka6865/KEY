@@ -128,7 +128,7 @@ export default function InvitePage() {
       <div className="glass" style={{ padding: '3rem', borderRadius: '32px', maxWidth: '500px', width: '100%', textAlign: 'center' }}>
         <div style={{ marginBottom: '2rem' }}>
           <img 
-            src={inviter?.profile_img || 'https://via.placeholder.com/64'} 
+            src={inviter?.profile_img || '/default-avatar.png'} 
             className={styles.avatar} 
             style={{ width: '64px', height: '64px', margin: '0 auto 1rem' }}
           />

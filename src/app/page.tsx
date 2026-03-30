@@ -71,11 +71,29 @@ export default function Home() {
       }
       setProfile(profileData);
 
-      // 2. 최근 기록 가져오기
+      // 2. 내가 참여한 모든 기록의 ID 먼저 가져오기
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('record_members')
+        .select('record_id')
+        .eq('user_id', authUser.id);
+
+      if (membershipError) throw membershipError;
+
+      const recordIds = membershipData?.map(m => m.record_id) || [];
+      
+      if (recordIds.length === 0) {
+        setRecords([]);
+        setStats({ escapes: 0, successRate: 0, friends: 0 });
+        setLoading(false);
+        return;
+      }
+
+      // 3. 해당 ID들을 가진 전체 기록 정보(모든 멤버 포함) 가져오기
       const { data: recordData, error: recordError } = await supabase
         .from('records')
         .select(`
           id,
+          user_id,
           played_at,
           is_success,
           rating,
@@ -85,7 +103,7 @@ export default function Home() {
           rating_mechanisms,
           rating_fear,
           rating_difficulty,
-          record_members!inner (
+          record_members (
             user_id,
             profiles (
               profile_img,
@@ -93,42 +111,33 @@ export default function Home() {
             )
           )
         `)
-        .eq('record_members.user_id', authUser.id)
-        .order('played_at', { ascending: false })
-        .limit(6);
+        .in('id', recordIds)
+        .order('played_at', { ascending: false });
 
       if (recordError) throw recordError;
-      setRecords(recordData || []);
 
-      // 3. 통계 계산 (친구 수 포함)
-      const { data: allRecordsData, error: allRecordsError } = await supabase
-        .from('records')
-        .select(`
-          is_success,
-          record_members!inner (user_id)
-        `)
-        .eq('record_members.user_id', authUser.id);
+      // 최근 기록 6개 설정
+      setRecords(recordData.slice(0, 6) || []);
 
-      if (allRecordsData) {
-        const escapes = allRecordsData.filter(r => r.is_success).length;
-        const rate = allRecordsData.length > 0 ? Math.round((escapes / allRecordsData.length) * 100) : 0;
-        
-        // 고유 친구 수 계산
-        const allFriends = new Set();
-        allRecordsData.forEach(r => {
-          r.record_members?.forEach((m: any) => {
-            if (m.user_id !== authUser.id) {
-              allFriends.add(m.user_id);
-            }
-          });
+      // 4. 통계 계산 (참여한 모든 기록 기반)
+      const escapes = recordData.filter(r => r.is_success).length;
+      const rate = recordData.length > 0 ? Math.round((escapes / recordData.length) * 100) : 0;
+      
+      // 고유 친구 수 계산
+      const allFriends = new Set();
+      recordData.forEach(r => {
+        r.record_members?.forEach((m: any) => {
+          if (m.user_id !== authUser.id) {
+            allFriends.add(m.user_id);
+          }
         });
+      });
 
-        setStats({
-          escapes,
-          successRate: rate,
-          friends: allFriends.size
-        });
-      }
+      setStats({
+        escapes,
+        successRate: rate,
+        friends: allFriends.size
+      });
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -246,10 +255,10 @@ export default function Home() {
           <span className={styles.statLabel}>평균 성공률</span>
           <span className={styles.statValue}>{stats.successRate}%</span>
         </div>
-        <div className={`${styles.statCard} glass glow-hover`}>
+        <Link href="/friends" className={`${styles.statCard} glass glow-hover`} style={{ textDecoration: 'none', color: 'inherit' }}>
           <span className={styles.statLabel}>함께한 친구</span>
           <span className={styles.statValue}>{stats.friends}</span>
-        </div>
+        </Link>
       </div>
 
       <section className={styles.themeListSection}>
@@ -282,7 +291,7 @@ export default function Home() {
                         {record.record_members?.slice(0, 3).map((member: any, idx: number) => (
                           <img 
                             key={idx} 
-                            src={member.profiles?.profile_img || 'https://via.placeholder.com/24'} 
+                            src={member.profiles?.profile_img || '/default-avatar.png'} 
                             alt={member.profiles?.nickname} 
                             className={styles.avatar}
                             title={member.profiles?.nickname}

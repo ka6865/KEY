@@ -31,11 +31,27 @@ export default function RecordsPage() {
         return;
       }
 
+      // 2. 내가 참여한 모든 기록의 ID 먼저 가져오기
+      const { data: membershipData, error: membershipError } = await supabase
+        .from('record_members')
+        .select('record_id')
+        .eq('user_id', session.user.id);
+
+      if (membershipError) throw membershipError;
+      const recordIds = membershipData?.map(m => m.record_id) || [];
+
+      if (recordIds.length === 0) {
+        setRecords([]);
+        setLoading(false);
+        return;
+      }
+
+      // 3. 해당 ID들을 가진 전체 기록 정보 가져오기
       const { data, error } = await supabase
         .from('records')
         .select(`
           *,
-          record_members!inner (
+          record_members (
             user_id,
             profiles (
               profile_img,
@@ -43,7 +59,8 @@ export default function RecordsPage() {
             )
           )
         `)
-        .eq('record_members.user_id', session.user.id);
+        .in('id', recordIds)
+        .order('played_at', { ascending: false });
 
       if (error) throw error;
       setRecords(data || []);
@@ -160,7 +177,8 @@ export default function RecordsPage() {
                 {record.record_members?.slice(0, 3).map((m: any, i: number) => (
                   <img 
                     key={i} 
-                    src={m.profiles?.profile_img || 'https://via.placeholder.com/28'} 
+                    src={m.profiles?.profile_img || '/default-avatar.png'} 
+                    alt={m.profiles?.nickname}
                     className={styles.avatar}
                     title={m.profiles?.nickname}
                   />
