@@ -35,6 +35,8 @@ export async function GET(request: Request) {
     }
 
     const data = await response.json();
+    console.log('--- NAVER API RAW DATA ---');
+    console.log(JSON.stringify(data, null, 2));
     return NextResponse.json(data);
   } catch (error) {
     console.error('Search API error:', error);

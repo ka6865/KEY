@@ -14,13 +14,16 @@ export default function Home() {
   const [selectedRecord, setSelectedRecord] = useState<any>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [records, setRecords] = useState<any[]>([]);
   const [stats, setStats] = useState({
     escapes: 0,
     successRate: 0,
     friends: 0
   });
+  const [nextReservation, setNextReservation] = useState<any>(null);
 
   useEffect(() => {
     const getSession = async () => {
@@ -45,6 +48,10 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const fetchUserData = async (authUser: User) => {
     setLoading(true);
     try {
@@ -56,11 +63,12 @@ export default function Home() {
         .maybeSingle();
 
       if (!profileData && !profileError) {
-        // 프로필이 없는 경우 초기값으로 생성 (카카오 닉네임 활용)
         const newProfile = {
           id: authUser.id,
           nickname: authUser.user_metadata?.full_name || '방랑자',
-          profile_img: authUser.user_metadata?.avatar_url || ''
+          profile_img: authUser.user_metadata?.avatar_url || '',
+          kakao_profile_img: authUser.user_metadata?.avatar_url || '',
+          current_avatar_type: 'kakao'
         };
         const { data: inserted } = await supabase
           .from('profiles')
@@ -138,6 +146,18 @@ export default function Home() {
         successRate: rate,
         friends: allFriends.size
       });
+
+      // 5. 가장 가까운 예약 정보 가져오기
+      const { data: resData } = await supabase
+        .from('reservations')
+        .select('*')
+        .eq('user_id', authUser.id)
+        .gte('reserved_at', new Date().toISOString())
+        .order('reserved_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      
+      setNextReservation(resData);
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
     } finally {
@@ -159,10 +179,68 @@ export default function Home() {
     await supabase.auth.signOut();
   };
 
-  if (loading) {
+  const handleUpdateAvatar = async (type: string, url: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          profile_img: url,
+          current_avatar_type: type
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      setProfile({ ...profile, profile_img: url, current_avatar_type: type });
+      alert('프로필 이미지가 변경되었습니다.');
+    } catch (err) {
+      console.error('Profile update failed:', err);
+    }
+  };
+
+  const handleSyncKakao = async () => {
+    if (!user || !profile) return;
+    
+    const kakaoImg = user.user_metadata?.avatar_url;
+    if (!kakaoImg) {
+      alert('카카오 프로필 정보를 가져올 수 없습니다. 동의 설정을 확인해 주세요.');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          profile_img: kakaoImg,
+          kakao_profile_img: kakaoImg,
+          current_avatar_type: 'kakao'
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      
+      setProfile({ ...profile, profile_img: kakaoImg, kakao_profile_img: kakaoImg, current_avatar_type: 'kakao' });
+      alert('카카오 프로필과 동기화되었습니다.');
+    } catch (err) {
+      console.error('Kakao sync failed:', err);
+    }
+  };
+
+  if (!mounted || loading) {
     return (
-      <div className={styles.main} style={{ justifyContent: 'center', alignItems: 'center' }}>
-        <p className="gradient-text" style={{ fontSize: '1.5rem', fontWeight: 600 }}>Loading...</p>
+      <div className={styles.main}>
+        <div className={styles.header} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1.5rem' }}>
+          <div className="skeleton" style={{ width: '120px', height: '32px' }}></div>
+          <div className="skeleton" style={{ width: '200px', height: '40px' }}></div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', marginTop: '2rem' }}>
+          <div className="skeleton" style={{ height: '120px', borderRadius: '16px' }}></div>
+          <div className="skeleton" style={{ height: '120px', borderRadius: '16px' }}></div>
+          <div className="skeleton" style={{ height: '120px', borderRadius: '16px' }}></div>
+        </div>
+        <div className="skeleton" style={{ width: '100%', height: '400px', marginTop: '3rem', borderRadius: '24px' }}></div>
       </div>
     );
   }
@@ -222,10 +300,19 @@ export default function Home() {
           <p>내 손안의 방탈출 아카이브</p>
         </div>
         <nav className={styles.nav}>
-          <div className={styles.userSection}>
-            <span className={styles.userEmail}>{profile?.nickname || '방랑자'}</span>
+          <div className={styles.userSection} onClick={() => setIsProfileModalOpen(true)} style={{ cursor: 'pointer' }}>
+            <div className={styles.profileImageWrapper}>
+              <img 
+                src={profile?.profile_img || '/avatars/avatar1.png'} 
+                alt="Profile" 
+                className={styles.profileAvatar}
+              />
+            </div>
+            <span className={styles.userNickname}>{profile?.nickname || '방랑자'}</span>
           </div>
           <div className={styles.navLinks}>
+            <Link href="/community" className={styles.navButton} style={{ color: 'var(--accent)', fontWeight: 700 }}>전시관</Link>
+            <Link href="/reservations" className={styles.navButton}>일정</Link>
             <Link href="/profile" className={styles.navButton}>프로필</Link>
             <button className={styles.navButton} onClick={handleLogout}>로그아웃</button>
             <button 
@@ -245,6 +332,31 @@ export default function Home() {
           <p className={styles.heroSubtitle}>기록을 통해 중복 플레이를 방지하고 친구들과 추억을 공유하세요.</p>
         </div>
       </section>
+
+      {nextReservation && (
+        <section style={{ marginBottom: '2rem' }}>
+          <div className="glass glow-hover" style={{ padding: '1.5rem', borderRadius: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid hsla(var(--accent-hsl), 0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+              <div style={{ 
+                background: 'var(--accent)', 
+                color: 'white', 
+                padding: '0.75rem 1.25rem', 
+                borderRadius: '16px', 
+                fontWeight: 900,
+                fontSize: '1.25rem'
+              }}>
+                D-{Math.ceil((new Date(nextReservation.reserved_at).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}
+              </div>
+              <div>
+                <p style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.25rem' }}>차례를 기다리는 모험</p>
+                <h4 style={{ fontSize: '1.125rem', fontWeight: 700 }}>{nextReservation.theme_name}</h4>
+                <p style={{ fontSize: '0.875rem', opacity: 0.8 }}>📍 {nextReservation.cafe_name}</p>
+              </div>
+            </div>
+            <Link href="/reservations" className={styles.textButton}>상세 일정</Link>
+          </div>
+        </section>
+      )}
 
       <div className={styles.statsGrid}>
         <div className={`${styles.statCard} glass glow-hover`}>
@@ -326,15 +438,118 @@ export default function Home() {
             ))}
           </div>
         ) : (
-          <div className={styles.emptyState}>
-            <p>아직 기록이 없습니다. 첫 번째 방탈출 기록을 남겨보세요!</p>
+          <div className={styles.emptyState} style={{ padding: '5rem 2rem', border: '1px dashed hsla(0, 0%, 100%, 0.1)', borderRadius: '32px' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>🗝️</div>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>아직 열리지 않은 이야기</h3>
+            <p style={{ opacity: 0.5, marginBottom: '2rem', maxWidth: '300px', margin: '0 auto 2rem' }}>
+              첫 번째 방탈출 기록을 남겨보세요. <br />여러분의 모험이 기록의 시작입니다.
+            </p>
+            <button 
+              className={`${styles.navButton} ${styles.primaryButton}`}
+              onClick={() => setIsModalOpen(true)}
+              style={{ margin: '0 auto' }}
+            >
+              지금 첫 기록 남기기
+            </button>
           </div>
         )}
       </section>
       
+      <section className={styles.usageSection}>
+        <div className={styles.sectionHeader}>
+          <h3 className="gradient-text">MOBILE WEB APP GUIDE</h3>
+          <p>THE KEY를 스마트폰 홈 화면에 추가하고 앱처럼 사용하세요.</p>
+        </div>
+        
+        <div className={styles.guideGrid}>
+          <div className={`${styles.guideCard} glass`}>
+            <div className={styles.deviceIcon}>🍏</div>
+            <h4>iPhone (Safari)</h4>
+            <ol>
+              <li>Safari 하단 중앙의 <strong>[공유]</strong> 버튼 클릭</li>
+              <li>메뉴를 내려 <strong>[홈 화면에 추가]</strong> 선택</li>
+              <li>우측 상단 <strong>[추가]</strong> 버튼 클릭</li>
+            </ol>
+          </div>
+          
+          <div className={`${styles.guideCard} glass`}>
+            <div className={styles.deviceIcon}>🤖</div>
+            <h4>Android (Chrome)</h4>
+            <ol>
+              <li>Chrome 우측 상단 <strong>[점 3개]</strong> 메뉴 클릭</li>
+              <li><strong>[앱 설치]</strong> 또는 <strong>[홈 화면에 추가]</strong> 클릭</li>
+              <li>팝업창에서 <strong>[설치]</strong> 버튼 클릭</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
       <footer className={styles.footer}>
-        <p>© 2026 THE KEY. ALL RIGHTS RESERVED.</p>
+        <div className={styles.footerContent}>
+          <div className={styles.footerMain}>
+            <div className={styles.footerBrand}>
+              <h2 className="gradient-text">THE KEY</h2>
+              <p>PREMIUM ESCAPE ROOM ARCHIVE</p>
+            </div>
+            <div className={styles.footerLinks}>
+              <div className={styles.linkGroup}>
+                <h5>SERVICE</h5>
+                <Link href="/community">전시관</Link>
+                <Link href="/reservations">예약 관리</Link>
+              </div>
+              <div className={styles.linkGroup}>
+                <h5>SUPPORT</h5>
+                <a href="mailto:ka6865@gmail.com">문의하기</a>
+                <span>이용약관</span>
+                <span>개인정보처리방침</span>
+              </div>
+            </div>
+          </div>
+          <div className={styles.footerBottom}>
+            <p>© 2026 THE KEY. ALL RIGHTS RESERVED.</p>
+            <div className={styles.socialIcons}>
+              {/* SNS 인장 등 추가 가능 */}
+            </div>
+          </div>
+        </div>
       </footer>
+
+      {isProfileModalOpen && (
+        <div className={styles.profileOverlay} onClick={() => setIsProfileModalOpen(false)}>
+          <div className={styles.profileModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.profileModalHeader}>
+              <h2 className="gradient-text">프로필 설정</h2>
+              <button className={styles.closeButton} onClick={() => setIsProfileModalOpen(false)}>&times;</button>
+            </div>
+
+            <div className={styles.avatarSection}>
+              <label>탐험가 아바타 선택</label>
+              <div className={styles.avatarGrid}>
+                {[1, 2, 3, 4, 5, 6].map((num) => {
+                  const url = `/avatars/avatar${num}.png`;
+                  return (
+                    <div 
+                      key={num} 
+                      className={`${styles.avatarItem} ${profile?.current_avatar_type === `avatar${num}` ? styles.activeAvatar : ''}`}
+                      onClick={() => handleUpdateAvatar(`avatar${num}`, url)}
+                    >
+                      <img src={url} alt={`Avatar ${num}`} />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className={styles.kakaoSyncSection}>
+              <label>카카오 연동</label>
+              <button className={styles.syncButton} onClick={handleSyncKakao}>
+                💬 카카오 프로필로 되돌리기 / 재동의
+              </button>
+              <p className={styles.syncHint}>처음 로그인 시 프로필 사진 동의를 안 하셨다면, 이 버튼을 통해 다시 연결할 수 있습니다.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isModalOpen && (
         <AddRecordModal 

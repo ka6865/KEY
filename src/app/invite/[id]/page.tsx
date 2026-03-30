@@ -95,6 +95,14 @@ export default function InvitePage() {
 
       if (joinError) throw joinError;
 
+      // 크루 합류 시 신뢰 등급 업그레이드 (이미 사진/GPS 인증인 3단계가 아니라면 2단계로)
+      if (record && record.verification_level < 2) {
+        await supabase
+          .from('records')
+          .update({ verification_level: 2 })
+          .eq('id', recordId);
+      }
+
       // 성공 시 대시보드로 이동
       router.push('/');
     } catch (err: any) {

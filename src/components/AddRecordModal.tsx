@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import styles from './AddRecordModal.module.css';
 import { supabase } from '../lib/supabase';
+import { compressImage } from '../lib/image-utils';
 
 interface Theme {
   id: string;
@@ -21,6 +22,17 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
   const [isSuccess, setIsSuccess] = useState(initialData ? initialData.is_success : true);
+  const [isPublic, setIsPublic] = useState(initialData ? (initialData.is_public ?? true) : true);
+  const [selectedAddress, setSelectedAddress] = useState(initialData ? initialData.cafe_address : '');
+  const [selectedMapX, setSelectedMapX] = useState(initialData ? initialData.mapx : '');
+  const [selectedMapY, setSelectedMapY] = useState(initialData ? initialData.mapy : '');
+  const [memo, setMemo] = useState(initialData?.memo || '');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState(initialData?.image_url || '');
+  const [verificationLevel, setVerificationLevel] = useState(initialData?.verification_level || 1);
+  const [isGpsVerified, setIsGpsVerified] = useState(false);
   
   // 검색 디바운스
   useEffect(() => {
@@ -53,8 +65,12 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
     return () => clearTimeout(timer);
   }, [cafeName, initialData]);
 
-  const selectCafe = (title: string) => {
+  const selectCafe = (title: string, address: string, mapx: string, mapy: string) => {
     setCafeName(title);
+    setSelectedAddress(address);
+    setSelectedMapX(mapx);
+    setSelectedMapY(mapy);
+    setSearchResults([]);
     setShowResults(false);
   };
   const [rating, setRating] = useState(initialData?.rating || 0);
@@ -72,6 +88,83 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
       navigator.clipboard.writeText(inviteLink);
       alert('초대 링크가 복사되었습니다!');
     }
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      // 1. 이미지 리사이징 (최적화)
+      const compressedBlob = await compressImage(file);
+      const fileName = `${Date.now()}-${file.name}`;
+      
+      // 2. Supabase Storage 업로드
+      const { data, error } = await supabase.storage
+        .from('review-images')
+        .upload(fileName, compressedBlob, {
+          contentType: 'image/jpeg'
+        });
+
+      if (error) throw error;
+
+      // 3. 공개 URL 획득
+      const { data: { publicUrl } } = supabase.storage
+        .from('review-images')
+        .getPublicUrl(fileName);
+
+      setImageUrl(publicUrl);
+      setVerificationLevel(3); // 사진 인증 성공 시 레벨 3 (골드)
+      alert('인증 사진이 정상적으로 업로드되었습니다!');
+    } catch (err: any) {
+      console.error('Image upload failed:', err);
+      alert('사진 업로드에 실패했습니다. 버킷 설정을 확인해 주세요.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleGpsVerify = () => {
+    if (!selectedMapX || !selectedMapY) {
+      alert('먼저 지점을 검색하고 선택해 주세요.');
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      alert('브라우저가 현재 위치 기능을 지원하지 않습니다.');
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        
+        // Naver mapx/mapy (KATECH) -> WGS84 (Lat/Lng) 근사 변환 
+        // 127xxxx, 37xxxx 형태로 들어오므로 10,000,000으로 나누어 비교 (단순 비교 방식)
+        const targetLng = Number(selectedMapX) / 10000000;
+        const targetLat = Number(selectedMapY) / 10000000;
+        
+        // 정밀 변환이 아니므로 임시로 0.005(약 500m) 오차 범위 허용
+        const diffLat = Math.abs(latitude - targetLat);
+        const diffLng = Math.abs(longitude - targetLng);
+
+        if (diffLat < 0.005 && diffLng < 0.005) {
+          setIsGpsVerified(true);
+          setVerificationLevel(3); // GPS 인증 성공도 골드 레벨
+          alert('위치 인증에 성공했습니다! 골드 배지가 활성화되었습니다. 📍');
+        } else {
+          alert(`현재 위치가 매장(약 ${targetLat.toFixed(2)}, ${targetLng.toFixed(2)})과 너무 멉니다.\n방문 중일 때만 위치 인증이 가능합니다.`);
+        }
+        setLocationLoading(false);
+      },
+      (err) => {
+        console.error('Geolocation error:', err);
+        alert('위치 정보를 가져오지 못했습니다. 권한 설정을 확인해 주세요.');
+        setLocationLoading(false);
+      }
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,6 +189,14 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
         rating_difficulty: ratingDifficulty,
         hints_used: hints,
         played_at: date,
+        is_public: isPublic,
+        cafe_address: selectedAddress,
+        region: selectedAddress ? (selectedAddress.split(' ')[0]) : '미지정',
+        memo: memo.trim(),
+        image_url: imageUrl,
+        verification_level: verificationLevel,
+        mapx: selectedMapX,
+        mapy: selectedMapY,
       };
 
       if (initialData) {
@@ -108,10 +209,21 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
         alert('기록이 수정되었습니다.');
       } else {
         // 생성 모드
-        const { error } = await supabase
+        const { data: newRecord, error } = await supabase
           .from('records')
-          .insert({ ...recordData, user_id: user.id });
+          .insert({ ...recordData, user_id: user.id })
+          .select()
+          .single();
+          
         if (error) throw error;
+
+        // 생성 직후 나 자신을 멤버 목록에 자동으로 추가 (대시보드 표시를 위해 필수)
+        const { error: memberError } = await supabase
+          .from('record_members')
+          .insert({ record_id: newRecord.id, user_id: user.id });
+
+        if (memberError) throw memberError;
+
         alert('탈출 기록이 성공적으로 저장되었습니다!');
       }
 
@@ -185,12 +297,12 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
           <span 
             key={star} 
             className={`${styles.star} ${value >= star ? styles.starActive : ''}`}
-            onClick={() => onChange(star)}
+            onClick={() => onChange(value === star ? 0 : star)}
           >
             ★
           </span>
         ))}
-        <span className={styles.ratingValue}>{value}점</span>
+        <span className={styles.ratingValue}>{value === 0 ? '없음' : `${value}점`}</span>
       </div>
     </div>
   );
@@ -213,7 +325,6 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
                 placeholder="테마명을 입력하세요" 
                 value={themeName}
                 onChange={(e) => setThemeName(e.target.value)}
-                autoFocus 
                 required
               />
             </div>
@@ -236,12 +347,13 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
                       <div 
                         key={idx} 
                         className={styles.searchItem}
-                        onClick={() => selectCafe(item.title)}
                       >
-                        <strong>{item.title}</strong>
-                        <span>{item.address}</span>
+                      <div className={styles.searchItemInfo} onClick={() => selectCafe(item.title, item.address, item.mapx, item.mapy)}>
+                        <div className={styles.searchItemName}>{item.title}</div>
+                        <div className={styles.searchItemAddr}>{item.address}</div>
                       </div>
-                    ))}
+                    </div>
+                  ))}
                   </div>
                 )}
               </div>
@@ -283,10 +395,85 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
             <StarRating label="🧱 장치/연출" value={ratingMechanisms} onChange={setRatingMechanisms} />
             <StarRating label="👻 공포도" value={ratingFear} onChange={setRatingFear} />
             <StarRating label="🧠 난이도" value={ratingDifficulty} onChange={setRatingDifficulty} />
-            <StarRating label="🏆 총평" value={rating} onChange={setRating} />
+            <StarRating label="🏆 만족도" value={rating} onChange={setRating} />
+          </div>
+
+          <div className={styles.field} style={{ marginTop: '0.5rem' }}>
+            <label>📸 인증 사진 첨부 (선택)</label>
+            <div className={styles.uploadBox}>
+              {imageUrl ? (
+                <div className={styles.previewContainer}>
+                  <img src={imageUrl} alt="Review" className={styles.previewImage} />
+                  <button type="button" className={styles.removeImage} onClick={() => { setImageUrl(''); setVerificationLevel(1); }}>삭제</button>
+                </div>
+              ) : (
+                <label className={styles.uploadLabel}>
+                  {uploading ? '업로드 중...' : '📷 사진 올리고 골드 배지 받기'}
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleImageChange} 
+                    hidden 
+                    disabled={uploading}
+                  />
+                </label>
+              )}
+            </div>
+            <p className={styles.tip}>사진을 등록하면 전시관에서 '인증된 리뷰' 표시가 붙습니다.</p>
+          </div>
+
+          <div className={styles.field} style={{ marginTop: '0.5rem' }}>
+            <label>📍 현재 위치 인증 (선택)</label>
+            <button 
+              type="button" 
+              className={`${styles.locationButton} ${isGpsVerified ? styles.verified : ''}`}
+              onClick={handleGpsVerify}
+              disabled={locationLoading || isGpsVerified || !selectedAddress}
+              style={{
+                width: '100%',
+                padding: '0.8rem',
+                borderRadius: '8px',
+                border: '1px solid hsla(0, 0%, 100%, 0.1)',
+                background: isGpsVerified ? 'hsla(145, 100%, 50%, 0.1)' : 'hsla(0, 0%, 100%, 0.05)',
+                color: isGpsVerified ? '#4ade80' : 'white',
+                fontWeight: 600,
+                cursor: selectedAddress ? 'pointer' : 'not-allowed',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              {locationLoading ? '위치 확인 중...' : isGpsVerified ? '✅ 위치 인증 완료' : '매장 방문 중인가요? 인증하기'}
+            </button>
+            <p className={styles.tip}>현장에서 인증하면 전시관 상세 정보에 '위치 인증됨' 표시가 붙습니다.</p>
+          </div>
+
+          <div className={styles.field} style={{ marginTop: '0.5rem' }}>
+            <label>💬 한줄평 (리뷰)</label>
+            <textarea 
+              className={styles.input} 
+              style={{ minHeight: '80px', resize: 'none' }}
+              placeholder="테마에 대한 생생한 후기를 남겨주세요." 
+              value={memo}
+              onChange={(e) => setMemo(e.target.value)}
+            />
           </div>
 
           <div className={styles.row}>
+            <div className={styles.field}>
+              <label>💬 리뷰 공개 설정</label>
+              <div 
+                className={`${styles.toggle} ${isPublic ? styles.toggleActive : ''}`}
+                onClick={() => setIsPublic(!isPublic)}
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                {isPublic ? '🌐 전체 공개 (커뮤니티 노출)' : '🔒 나만 보기 (비공개)'}
+              </div>
+              <p style={{ fontSize: '0.75rem', opacity: 0.5, marginTop: '0.5rem' }}>
+                전체 공개 시 다른 사용자들이 커뮤니티에서 이 리뷰를 볼 수 있습니다.
+              </p>
+            </div>
             <div className={styles.field}>
               <label>사용 힌트 수</label>
               <input 
@@ -321,23 +508,13 @@ export default function AddRecordModal({ onClose, initialData }: AddRecordModalP
               </button>
             )}
             
-            {(!initialData || isOwner) ? (
-              <button 
-                type="submit" 
-                className={styles.submitButton}
-                disabled={loading}
-              >
-                {loading ? '처리 중...' : (initialData ? '수정 완료' : '기록 완료하기')}
-              </button>
-            ) : (
-              <button 
-                type="button" 
-                className={styles.submitButton}
-                onClick={onClose}
-              >
-                닫기
-              </button>
-            )}
+            <button 
+              type="submit" 
+              className={styles.submitButton}
+              disabled={loading}
+            >
+              {loading ? '처리 중...' : (initialData ? '수정 완료' : '기록 완료하기')}
+            </button>
           </div>
         </form>
       </div>

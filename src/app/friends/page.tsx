@@ -187,9 +187,16 @@ export default function FriendsStatsPage() {
           )}
         </>
       ) : (
-        <div className="glass" style={{ padding: '4rem', textAlign: 'center', borderRadius: '32px' }}>
-          <p style={{ opacity: 0.5 }}>아직 친구와 함께한 기록이 없습니다.</p>
-          <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>기록 상세보기에서 친구를 초대해 보세요!</p>
+        <div className="glass" style={{ padding: '6rem 2rem', textAlign: 'center', borderRadius: '32px', border: '1px dashed hsla(0,0%,100%,0.1)' }}>
+          <div style={{ fontSize: '3.5rem', marginBottom: '1.5rem' }}>🤝</div>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>혼자보다는 함께!</h3>
+          <p style={{ opacity: 0.5, maxWidth: '400px', margin: '0 auto 2.5rem', lineHeight: '1.6' }}>
+            기록 상세보기에서 **[친구 초대하기]** 링크를 복사해 공유해 보세요.<br /> 
+            친구가 링크를 통해 합류하면 이곳에서 함께한 통계를 확인할 수 있습니다.
+          </p>
+          <Link href="/" className={`${styles.backButton}`} style={{ display: 'inline-block' }}>
+            기록 만들러 가기
+          </Link>
         </div>
       )}
     </div>
