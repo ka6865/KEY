@@ -34,16 +34,10 @@ export default function InvitePage() {
 
   const fetchRecordData = async (currentUserId?: string) => {
     try {
-      // 1. 기록 상세 정보와 작성자 프로필 가져오기
+      // 1. 먼저 기록 상세 정보만 가져오기 (조인 없이 개별 호출로 안정성 확보)
       const { data: recordData, error: recordError } = await supabase
         .from('records')
-        .select(`
-          *,
-          profiles:user_id (
-            nickname,
-            profile_img
-          )
-        `)
+        .select('*')
         .eq('id', recordId)
         .single();
 
@@ -52,9 +46,19 @@ export default function InvitePage() {
       }
 
       setRecord(recordData);
-      setInviter(recordData.profiles);
 
-      // 2. 현재 로그인 중이라면 이미 멤버인지 확인
+      // 2. 기록 정보를 바탕으로 작성자 프로필 따로 가져오기
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('nickname, profile_img')
+        .eq('id', recordData.user_id)
+        .single();
+
+      if (profileData) {
+        setInviter(profileData);
+      }
+
+      // 3. 현재 로그인 중이라면 이미 멤버인지 확인
       if (currentUserId) {
         const { data: existingMember } = await supabase
           .from('record_members')
