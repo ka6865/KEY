@@ -1,0 +1,257 @@
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: hsl(var(--card));
+  width: 90%;
+  max-width: 500px;
+  border-radius: var(--radius);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  padding: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.header {
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  font-size: 1.5rem;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.field label {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+  font-weight: 500;
+}
+
+.input {
+  background: hsla(0, 0%, 100%, 0.03);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: white;
+  width: 100%;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px hsla(var(--accent-hsl), 0.2);
+}
+
+.searchResults {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #111114;
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+}
+
+.searchItem {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  border-bottom: 1px solid hsla(0, 0%, 100%, 0.05);
+  transition: background 0.2s;
+}
+
+.searchItem:hover {
+  background: hsla(0, 0%, 100%, 0.05);
+}
+
+.searchItem strong {
+  display: block;
+  font-size: 0.9375rem;
+  color: white;
+}
+
+.searchItem span {
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.selectedTheme {
+  padding: 0.75rem 1rem;
+  background: hsla(var(--accent-hsl), 0.1);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.selectedThemeInfo strong {
+  display: block;
+  font-size: 0.9375rem;
+}
+
+.removeTheme {
+  background: transparent;
+  border: none;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  font-size: 1.25rem;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.toggleGroup {
+  display: flex;
+  background: hsla(0, 0%, 100%, 0.05);
+  border-radius: 8px;
+  padding: 0.25rem;
+}
+
+.toggle {
+  flex: 1;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.toggleActive {
+  background: var(--accent);
+  color: white;
+}
+
+.ratingGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.star {
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: hsla(0, 0%, 100%, 0.2);
+  transition: color 0.2s;
+}
+
+.starActive {
+  color: #ffc107;
+}
+
+.inviteSection {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: hsla(var(--accent-hsl), 0.05);
+  border-radius: 12px;
+  border: 1px dashed hsla(var(--accent-hsl), 0.3);
+}
+
+.inviteHeader {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--accent);
+  margin-bottom: 0.25rem;
+}
+
+.inviteDesc {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+  margin-bottom: 1rem;
+}
+
+.inviteLinkBox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.copyInput {
+  flex: 1;
+  background: hsla(0, 0%, 100%, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 8px;
+  padding: 0.625rem;
+  color: white;
+  font-size: 0.8125rem;
+  outline: none;
+}
+
+.copyButton {
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.625rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.submitButton {
+  flex: 1;
+  background: var(--accent-gradient);
+  border: none;
+  border-radius: 8px;
+  padding: 1rem;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.deleteButton {
+  padding: 1rem;
+  background: hsla(0, 100%, 50%, 0.1);
+  border: 1px solid hsla(0, 100%, 50%, 0.2);
+  color: #ff4d4d;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}

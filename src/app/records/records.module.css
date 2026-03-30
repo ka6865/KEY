@@ -1,0 +1,238 @@
+.container {
+  max-width: 1000px;
+  margin: 4rem auto;
+  padding: 0 2rem;
+}
+
+.header {
+  margin-bottom: 3rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.titleSection h1 {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.titleSection p {
+  color: hsl(var(--muted-foreground));
+}
+
+.controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 300px;
+  background: hsla(0, 0%, 100%, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 12px;
+  padding: 0.875rem 1.25rem;
+  color: white;
+  font-size: 0.9375rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.searchInput:focus {
+  border-color: var(--accent);
+  background: hsla(0, 0%, 100%, 0.08);
+}
+
+.filterGroup {
+  display: flex;
+  gap: 1rem;
+}
+
+.select {
+  background: hsla(0, 0%, 100%, 0.05);
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 12px;
+  padding: 0 1rem;
+  color: white;
+  font-size: 0.875rem;
+  outline: none;
+  cursor: pointer;
+  height: 3rem;
+}
+
+.select option {
+  background: #111;
+  color: white;
+}
+
+.recordList {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recordItem {
+  display: grid;
+  grid-template-columns: 100px 2fr 1fr 120px 100px;
+  align-items: center;
+  padding: 1.5rem;
+  border-radius: 16px;
+  transition: all 0.2s;
+  border: 1px solid hsla(0, 0%, 100%, 0.05);
+  cursor: pointer;
+}
+
+.recordItem:hover {
+  background: hsla(0, 0%, 100%, 0.05);
+  border-color: hsla(0, 0%, 100%, 0.1);
+  transform: translateX(4px);
+}
+
+.date {
+  font-size: 0.8125rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.themeInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.themeName {
+  font-weight: 700;
+  font-size: 1.125rem;
+}
+
+.cafeName {
+  font-size: 0.875rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  width: fit-content;
+}
+
+.badgeSuccess {
+  background: hsla(var(--accent-hsl), 0.1);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.badgeFail {
+  background: hsla(0, 100%, 50%, 0.1);
+  color: #ff4d4d;
+  border: 1px solid #ff4d4d;
+}
+
+.rating {
+  font-weight: 600;
+  color: #ffc107;
+}
+
+.facepile {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid #111;
+  margin-left: -10px;
+  object-fit: cover;
+}
+
+.avatar:first-child {
+  margin-left: 0;
+}
+
+.backButton {
+  background: transparent;
+  border: 1px solid hsla(0, 0%, 100%, 0.1);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  color: white;
+  font-size: 0.875rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 1rem;
+    margin: 2rem auto;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .titleSection h1 {
+    font-size: 1.75rem;
+  }
+
+  .controls {
+    flex-direction: column;
+  }
+
+  .searchInput {
+    min-width: 100%;
+  }
+
+  .filterGroup {
+    width: 100%;
+  }
+
+  .select {
+    flex: 1;
+  }
+
+  .recordItem {
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  /* 모바일에서 헤더행 숨기기 */
+  .recordList > div:first-child[style*="cursor: default"] {
+    display: none !important;
+  }
+
+  .date {
+    grid-column: 1 / -1;
+    margin-bottom: 0.25rem;
+  }
+
+  .themeInfo {
+    grid-column: 1 / 2;
+  }
+
+  .badge {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    align-self: center;
+  }
+
+  .rating {
+    grid-column: 1 / 2;
+    font-size: 0.875rem;
+  }
+
+  .facepile {
+    grid-column: 2 / 3;
+    justify-content: flex-end;
+    margin-top: 0.5rem;
+  }
+}

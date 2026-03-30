@@ -1,0 +1,22 @@
+{
+  "name": "The Key - 방탈출 아카이브",
+  "short_name": "The Key",
+  "description": "내 손안의 프리미엄 방탈출 기록 공간",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
