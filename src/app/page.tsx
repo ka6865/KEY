@@ -82,6 +82,9 @@ export default function Home() {
           hints_used,
           theme_name,
           cafe_name,
+          rating_mechanisms,
+          rating_fear,
+          rating_difficulty,
           record_members (
             user_id,
             profiles (
